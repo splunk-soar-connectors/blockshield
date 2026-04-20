@@ -14,7 +14,12 @@
 # and limitations under the License.
 
 # API endpoints
-BLOCKSHIELD_CONNECTIVITY_ENDPOINT = "/endpoint/to/test/connectivity"
+BLOCKSHIELD_CONNECTIVITY_ENDPOINT = "/v1/health"
+BLOCKSHIELD_API_IPINFO = "/v1/ipinfo"
+BLOCKSHIELD_API_BULK_DOMAINS = "/v1/bulk_domains"
+BLOCKSHIELD_API_BULK_IPS = "/v1/bulk_ips"
+BLOCKSHIELD_API_BULK_URLS = "/v1/bulk_urls"
+
 
 # Error messages
 BLOCKSHIELD_ERR_CONNECTIVITY_TEST = "Test Connectivity Failed"

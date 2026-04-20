@@ -19,10 +19,15 @@ from phantom.action_result import ActionResult
 from phantom.base_connector import BaseConnector
 
 from blockshield_consts import (
+    BLOCKSHIELD_API_BULK_DOMAINS,
+    BLOCKSHIELD_API_BULK_IPS,
+    BLOCKSHIELD_API_BULK_URLS,
+    BLOCKSHIELD_API_IPINFO,
     BLOCKSHIELD_CONNECTIVITY_ENDPOINT,
     BLOCKSHIELD_ERR_CONNECTIVITY_TEST,
     BLOCKSHIELD_SUCC_CONNECTIVITY_TEST,
 )
+
 
 
 class BlockshieldConnector(BaseConnector):
@@ -35,6 +40,7 @@ class BlockshieldConnector(BaseConnector):
         self._base_url = None
         self._api_key = None
         self._verify = False
+        self._timeout = 30
 
     def _make_rest_call(self, endpoint, action_result, headers=None, params=None, data=None, json=None, method="get"):
         """
@@ -105,9 +111,22 @@ class BlockshieldConnector(BaseConnector):
         config = self.get_config()
 
         # Get configuration parameters
-        self._base_url = config.get("host")
+        self._base_url = config.get("base_url")
         self._api_key = config.get("api_key")
+        self._timeout = config.get("timeout", 30)
         self._verify = config.get("verify_server_cert", False)
+
+        if not self._base_url or not self._api_key:
+            self.save_progress("Missing required configuration parameters")
+            return phantom.APP_ERROR
+
+        self._session = requests.Session()
+        self._session.headers.update({
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        })
+        self._session.verify = config.get("verify_ssl", True)
 
         return phantom.APP_SUCCESS
 
@@ -119,7 +138,10 @@ class BlockshieldConnector(BaseConnector):
 
         action_mapping = {
             "test_connectivity": self._handle_test_connectivity,
-            # Add more action handlers here
+            "ipinfo": self._handle_ipinfo,
+            "bulk_domains": self._handle_bulk_domains,
+            "bulk_ips": self._handle_bulk_ips,
+            "bulk_urls": self._handle_bulk_urls,
         }
 
         action = self.get_action_identifier()
@@ -131,6 +153,98 @@ class BlockshieldConnector(BaseConnector):
 
         return action_execution_status
 
+    # -------------------------------------------------------------------------
+    # IP Info Action
+    # -------------------------------------------------------------------------
+
+    def _handle_ipinfo(self, param):
+        action_result = self.add_action_result(ActionResult(dict(param)))
+
+        ip = param.get("ip")
+        if not ip:
+            return action_result.set_status(phantom.APP_ERROR, "Missing required parameter: 'ip'")
+
+        ret_val, response = self._make_rest_call(f"{BLOCKSHIELD_API_IPINFO}/{ip}", action_result)
+
+        if phantom.is_fail(ret_val):
+            return action_result.get_status()
+
+        action_result.add_data(response)
+        action_result.update_summary({"ip": ip})
+
+        return action_result.set_status(phantom.APP_SUCCESS, f"Successfully retrieved info for IP {ip}")
+
+    # -------------------------------------------------------------------------
+    # Bulk Actions
+    # -------------------------------------------------------------------------
+
+    def _handle_bulk_domains(self, param):
+        action_result = self.add_action_result(ActionResult(dict(param)))
+
+        domains = [d.strip() for d in param.get("domains", "").split(",") if d.strip()]
+        source = param.get("source")
+        description = param.get("description")
+
+        if not domains or not source:
+            return action_result.set_status(phantom.APP_ERROR, "Missing required parameters: 'domains' or 'source'")
+
+        data = {"domains": domains, "source": source, "description": description}
+
+        ret_val, response = self._make_rest_call(BLOCKSHIELD_API_BULK_DOMAINS, action_result, method="post", data=data)
+
+        if phantom.is_fail(ret_val):
+            return action_result.get_status()
+
+        action_result.add_data(response)
+        action_result.update_summary({"domains_added": len(domains)})
+
+        return action_result.set_status(phantom.APP_SUCCESS, f"Successfully added {len(domains)} domains")
+
+    def _handle_bulk_ips(self, param):
+        action_result = self.add_action_result(ActionResult(dict(param)))
+
+        ips = [ip.strip() for ip in param.get("ips", "").split(",") if ip.strip()]
+        source = param.get("source")
+        subnet = param.get("subnet", 32)
+        reported_by = param.get("reported_by", "")
+        description = param.get("description")
+
+        if not ips or not source:
+            return action_result.set_status(phantom.APP_ERROR, "Missing required parameters: 'ips' or 'source'")
+
+        data = {"ips": ips, "source": source, "subnet": subnet, "reported_by": reported_by, "description": description}
+
+        ret_val, response = self._make_rest_call(BLOCKSHIELD_API_BULK_IPS, action_result, method="post", data=data)
+
+        if phantom.is_fail(ret_val):
+            return action_result.get_status()
+
+        action_result.add_data(response)
+        action_result.update_summary({"ips_added": len(ips)})
+
+        return action_result.set_status(phantom.APP_SUCCESS, f"Successfully added {len(ips)} IPs")
+
+    def _handle_bulk_urls(self, param):
+        action_result = self.add_action_result(ActionResult(dict(param)))
+
+        urls = [u.strip() for u in param.get("urls", "").split(",") if u.strip()]
+        source = param.get("source")
+        description = param.get("description")
+
+        if not urls or not source:
+            return action_result.set_status(phantom.APP_ERROR, "Missing required parameters: 'urls' or 'source'")
+
+        data = {"urls": urls, "source": source, "description": description}
+
+        ret_val, response = self._make_rest_call(BLOCKSHIELD_API_BULK_URLS, action_result, method="post", data=data)
+
+        if phantom.is_fail(ret_val):
+            return action_result.get_status()
+
+        action_result.add_data(response)
+        action_result.update_summary({"urls_added": len(urls)})
+
+        return action_result.set_status(phantom.APP_SUCCESS, f"Successfully added {len(urls)} URLs")
 
 if __name__ == "__main__":
     import sys

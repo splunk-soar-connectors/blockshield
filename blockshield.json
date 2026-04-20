@@ -1,50 +1,303 @@
 {
-    "appid": "ffffffff-ffff-4fff-afff-ffffffffffff",
-    "name": "Example App Name",
-    "description": "Brief description of the app",
-    "type": "information",
-    "product_vendor": "Vendor Name",
+    "appid": "093d8b52-4b0a-438b-9da0-4f2d540bbf7b",
+    "name": "BlockShield Connector",
+    "description": "BlockShield threat intelligence connector for submitting and enriching IOCs",
+    "type": "reputation",
+    "product_vendor": "CrossRealms",
     "logo": "logo.svg",
     "logo_dark": "logo_dark.svg",
-    "product_name": "Product Name",
+    "product_name": "BlockShield",
     "product_version_regex": ".*",
-    "publisher": "Splunk",
-    "license": "Copyright (c) 2025 Splunk Inc.",
-    "app_version": "1.0.1",
-    "latest_tested_versions": [
-        "Version X.Y.Z, Month Year"
-    ],
-    "utctime_updated": "2025-08-01T20:30:47.300351Z",
-    "package_name": "phantom_blockshield",
+    "publisher": "CrossRealms",
+    "license": "Copyright (c) CrossRealms International Inc., 2026",
+    "app_version": "1.0.0",
+    "utctime_updated": "2025-12-15T08:11:11.643141Z",
+    "package_name": "blockshield_connector",
     "main_module": "blockshield_connector.py",
-    "app_config_render": "default",
-    "min_phantom_version": "6.3.0",
-    "python_version": "3.9, 3.13",
-    "fips_compliant": true,
+    "min_phantom_version": "7.0.0",
+    "python_version": "3.13",
+    "fips_compliant": false,
     "app_wizard_version": "1.0.0",
+    "app_config_render": "default",
+    "latest_tested_versions": [
+        "BlockShield API v1.0"
+    ],
+    "contributors": [
+        {"name": ""}
+    ],
     "configuration": {
-        "host": {
+        "base_url": {
+            "description": "Base URL of the BlockShield API (e.g. https://api.blockshield.example.com)",
             "data_type": "string",
-            "order": 0,
-            "description": "Example Hostname or IP address",
-            "required": true
+            "required": true,
+            "order": 0
         },
         "api_key": {
-            "data_type": "string",
-            "order": 1,
-            "description": "Example API Key for authentication",
-            "required": true
+            "description": "API key for authentication",
+            "data_type": "password",
+            "required": true,
+            "order": 1
+        },
+        "verify_ssl": {
+            "description": "Verify SSL certificates",
+            "data_type": "boolean",
+            "required": false,
+            "default": true,
+            "order": 2
+        },
+        "timeout": {
+            "description": "Request timeout in seconds",
+            "data_type": "numeric",
+            "required": false,
+            "default": 30,
+            "order": 3
         }
     },
     "actions": [
         {
             "action": "test connectivity",
             "identifier": "test_connectivity",
-            "description": "Validate the asset configuration for connectivity",
+            "description": "Validate the asset configuration for connectivity using supplied configuration",
             "type": "test",
             "read_only": true,
             "parameters": {},
             "output": [],
+            "versions": "EQ(*)"
+        },
+        {
+            "action": "get ip info",
+            "identifier": "ipinfo",
+            "description": "Retrieve threat intelligence information about an IP address",
+            "type": "investigate",
+            "read_only": true,
+            "parameters": {
+                "ip": {
+                    "description": "IP address to look up",
+                    "data_type": "string",
+                    "required": true,
+                    "primary": true,
+                    "contains": ["ip"],
+                    "order": 0
+                }
+            },
+            "output": [
+                {
+                    "data_path": "action_result.status",
+                    "data_type": "string",
+                    "example_values": ["success", "failed"]
+                },
+                {
+                    "data_path": "action_result.message",
+                    "data_type": "string",
+                    "example_values": ["Successfully retrieved info for IP 8.8.8.8"]
+                },
+                {
+                    "data_path": "action_result.summary.ip",
+                    "data_type": "string",
+                    "example_values": ["8.8.8.8"]
+                },
+                {
+                    "data_path": "action_result.data.*",
+                    "data_type": "string",
+                    "column_name": "Data",
+                    "column_order": 0,
+                    "example_values": [""]
+                }
+            ],
+            "render": {
+                "type": "table",
+                "title": "IP Information"
+            },
+            "versions": "EQ(*)"
+        },
+        {
+            "action": "add bulk domains",
+            "identifier": "bulk_domains",
+            "description": "Submit a list of domains to the BlockShield blocklist",
+            "type": "contain",
+            "read_only": false,
+            "parameters": {
+                "domains": {
+                    "description": "Comma-separated list of domains to submit",
+                    "data_type": "string",
+                    "required": true,
+                    "primary": true,
+                    "contains": ["domain"],
+                    "allow_list": true,
+                    "order": 0
+                },
+                "source": {
+                    "description": "Source of the domains (e.g. ThreatFeed, SOC)",
+                    "data_type": "string",
+                    "required": true,
+                    "order": 1
+                },
+                "description": {
+                    "description": "Optional description",
+                    "data_type": "string",
+                    "required": false,
+                    "order": 2
+                }
+            },
+            "output": [
+                {
+                    "data_path": "action_result.status",
+                    "data_type": "string",
+                    "example_values": ["success", "failed"]
+                },
+                {
+                    "data_path": "action_result.message",
+                    "data_type": "string",
+                    "example_values": ["Successfully added 5 domains"]
+                },
+                {
+                    "data_path": "action_result.summary.domains_added",
+                    "data_type": "numeric",
+                    "example_values": [5]
+                },
+                {
+                    "data_path": "action_result.data.*",
+                    "data_type": "string",
+                    "column_name": "Result",
+                    "column_order": 0,
+                    "example_values": [""]
+                }
+            ],
+            "render": {
+                "type": "table",
+                "title": "Bulk Domains Result"
+            },
+            "versions": "EQ(*)"
+        },
+        {
+            "action": "add bulk ips",
+            "identifier": "bulk_ips",
+            "description": "Submit a list of IP addresses to the BlockShield blocklist",
+            "type": "contain",
+            "read_only": false,
+            "parameters": {
+                "ips": {
+                    "description": "Comma-separated list of IP addresses to submit",
+                    "data_type": "string",
+                    "required": true,
+                    "primary": true,
+                    "contains": ["ip"],
+                    "allow_list": true,
+                    "order": 0
+                },
+                "source": {
+                    "description": "Source of the IPs (e.g. ThreatFeed, SOC)",
+                    "data_type": "string",
+                    "required": true,
+                    "order": 1
+                },
+                "subnet": {
+                    "description": "Subnet mask",
+                    "data_type": "numeric",
+                    "required": false,
+                    "default": 32,
+                    "order": 2
+                },
+                "reported_by": {
+                    "description": "Name of the person or system reporting",
+                    "data_type": "string",
+                    "required": false,
+                    "order": 3
+                },
+                "description": {
+                    "description": "Optional description",
+                    "data_type": "string",
+                    "required": false,
+                    "order": 4
+                }
+            },
+            "output": [
+                {
+                    "data_path": "action_result.status",
+                    "data_type": "string",
+                    "example_values": ["success", "failed"]
+                },
+                {
+                    "data_path": "action_result.message",
+                    "data_type": "string",
+                    "example_values": ["Successfully added 5 IPs"]
+                },
+                {
+                    "data_path": "action_result.summary.ips_added",
+                    "data_type": "numeric",
+                    "example_values": [5]
+                },
+                {
+                    "data_path": "action_result.data.*",
+                    "data_type": "string",
+                    "column_name": "Result",
+                    "column_order": 0,
+                    "example_values": [""]
+                }
+            ],
+            "render": {
+                "type": "table",
+                "title": "Bulk IPs Result"
+            },
+            "versions": "EQ(*)"
+        },
+        {
+            "action": "add bulk urls",
+            "identifier": "bulk_urls",
+            "description": "Submit a list of URLs to the BlockShield blocklist",
+            "type": "contain",
+            "read_only": false,
+            "parameters": {
+                "urls": {
+                    "description": "Comma-separated list of URLs to submit",
+                    "data_type": "string",
+                    "required": true,
+                    "primary": true,
+                    "contains": ["url"],
+                    "allow_list": true,
+                    "order": 0
+                },
+                "source": {
+                    "description": "Source of the URLs (e.g. ThreatFeed, SOC)",
+                    "data_type": "string",
+                    "required": true,
+                    "order": 1
+                },
+                "description": {
+                    "description": "Optional description",
+                    "data_type": "string",
+                    "required": false,
+                    "order": 2
+                }
+            },
+            "output": [
+                {
+                    "data_path": "action_result.status",
+                    "data_type": "string",
+                    "example_values": ["success", "failed"]
+                },
+                {
+                    "data_path": "action_result.message",
+                    "data_type": "string",
+                    "example_values": ["Successfully added 5 URLs"]
+                },
+                {
+                    "data_path": "action_result.summary.urls_added",
+                    "data_type": "numeric",
+                    "example_values": [5]
+                },
+                {
+                    "data_path": "action_result.data.*",
+                    "data_type": "string",
+                    "column_name": "Result",
+                    "column_order": 0,
+                    "example_values": [""]
+                }
+            ],
+            "render": {
+                "type": "table",
+                "title": "Bulk URLs Result"
+            },
             "versions": "EQ(*)"
         }
     ]
