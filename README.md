@@ -15,6 +15,7 @@ This table lists the configuration variables required to operate Example App Nam
 VARIABLE | REQUIRED | TYPE | DESCRIPTION
 -------- | -------- | ---- | -----------
 **host** | required | string | Example Hostname or IP address |
+**verify_server_cert** | optional | boolean | Verify the API server certificate |
 **api_key** | required | password | Example API Key for authentication |
 
 ### Supported Actions
